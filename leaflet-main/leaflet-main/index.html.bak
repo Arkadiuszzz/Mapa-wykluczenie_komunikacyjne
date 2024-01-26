@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wykluczenie Komunikacyjne</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <link rel="stylesheet" href="./data/stylo.css" />
+</head>
+
+<body>
+	<div id="naglowek"><h1 id="naglowekh1">Mapa obrazująca wykluczenie komunikacyjne w Polsce</h1></div>
+    <div id="map"></div>
+	<div id="stopka"><h4 id="infoh4">*dane na rok 2022</h4></div>
+</body>
+
+</html>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+<script type="text/javascript" src="./data/nowy_2.js"></script>
+<script type="text/javascript" src="./data/koleo4.js"></script>
+<script type="text/javascript" src="./data/stacje_koleowe.js"></script>
+<script type="text/javascript" src="./data/trzeci.js"></script>
+<script type="text/javascript" src="./data/czwarty.js"></script>
+<script type="text/javascript" src="./data/piaty.js"></script>
+<script type="text/javascript" src="./data/komunikacja_aut.js"></script>
+<script type="text/javascript" src="./data/komunikacja_wies.js"></script>
+<script type="text/javascript" src="./data/zatrzymania_poc.js"></script>
+<script type="text/javascript" src="./data/liczba_stac.js"></script>
+
+<script>
+    /*=====OSM  LAYER=====*/
+
+    var map = L.map('map').setView([52.0693, 19.4804], 6);
+    var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    });
+    osm.addTo(map);
+
+    /*=====TILE LAYER=====*/
+
+    var CartoDB_DarkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19
+    });
+    CartoDB_DarkMatter.addTo(map);
+
+    // Google Map Layer
+
+    googleStreets = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+    });
+    googleStreets.addTo(map);
+
+    // Satelite Layer
+    googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+    });
+    googleSat.addTo(map);
+
+    var Stamen_Watercolor = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}', {
+        attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        subdomains: 'abcd',
+        minZoom: 1,
+        maxZoom: 16,
+        ext: 'jpg'
+    });
+    Stamen_Watercolor.addTo(map);
+
+    /*=====GEOJSON=====*/
+
+    var woj1 = L.geoJSON(drugi).addTo(map);
+    var linie_kol = L.geoJSON(koleo, { style: { visibility: 'hidden' } });
+	var stacje_kol = L.geoJSON(stacje, { style: { visibility: 'hidden' } });
+	var woj2 = L.geoJSON(pow_woj, { style: { visibility: 'hidden' } });
+	var woj3 = L.geoJSON(powierz_pow, { style: { visibility: 'hidden' } });
+	var woj4 = L.geoJSON(wym, { style: { visibility: 'hidden' } });
+	var woj5 = L.geoJSON(kom_aut, { style: { visibility: 'hidden' } });
+	var woj6 = L.geoJSON(kom_wies, { style: { visibility: 'hidden' } });
+	var pow = L.geoJSON(zat_poc, { style: { visibility: 'hidden' } });
+	var pow2 = L.geoJSON(licz_stac, { style: { visibility: 'hidden' } });
+
+
+    /*=====LAYER CONTROL=====*/
+
+    var baseLayers = {
+        "Satellite": googleSat,
+        "Google Map": googleStreets,
+        "Water Color": Stamen_Watercolor,
+        "OpenStreetMap": osm,
+    };
+
+    var overlays = {
+        "Ludność w województwie bez kolei*": woj1,
+        "Linie kolejowe w Polsce": linie_kol,
+        "Stacje kolejowe w Polsce": stacje_kol,
+        "Liczba powiatów bez kolei w województwie*": woj2,
+		"Powierzchnia powiatów bez kolei*": woj3,
+		"Wskaźnik wymiany pasażerskiej*": woj4,
+		"Zmiana liczby kilometrów komunikacji autobusowej 2016 - 2022": woj5,
+		"Zmiana liczby kilometrów komunikacji autobusowej na wsi 2016 - 2022": woj6,
+		"Zatrzymania pociągów w powiatach*": pow,
+		"Liczba czynnych stacji w przeliczeniu  na 10000 tys. mieszkańców*": pow2
+    };
+
+    L.control.layers(baseLayers, overlays).addTo(map);
+
+    // Nasłuchiwanie na zdarzenia overlayremove i overlayadd
+    map.on('overlayremove', function (eventLayer) {
+        handleOverlayChange(eventLayer, false);
+    });
+
+    map.on('overlayadd', function (eventLayer) {
+        handleOverlayChange(eventLayer, true);
+    });
+
+    // Funkcja obsługująca zmiany w warstwach
+    function handleOverlayChange(eventLayer, isAdding) {
+        var layer = eventLayer.layer;
+
+        if (isAdding) {
+            layer.addTo(map);
+
+            // Jeśli dodajemy warstwę geojson, dodaj kolory i zdarzenia
+            if (layer === woj1) {
+                geojson = L.geoJson(drugi, {
+                    style: style1,
+                    onEachFeature: onEachFeature
+                }).addTo(map);
+
+                document.getElementById('info-div').style.display = 'block';
+                document.getElementById('info2-div').style.display = 'none';
+                document.getElementById('info3-div').style.display = 'none';
+				document.getElementById('info4-div').style.display = 'none';
+				document.getElementById('info5-div').style.display = 'none';
+				document.getElementById('info6-div').style.display = 'none';
+				document.getElementById('info7-div').style.display = 'none';
+				document.getElementById('info8-div').style.display = 'none';
+
+            } else if (layer === woj2) {
+                geojson2 = L.geoJson(pow_woj, {
+                    style: style2,
+                    onEachFeature: onEachFeature2
+                }).addTo(map);
+                info2.addTo(map);
+                document.getElementById('info-div').style.display = 'none';
+                document.getElementById('info2-div').style.display = 'block';
+				document.getElementById('info3-div').style.display = 'none';
+				document.getElementById('info4-div').style.display = 'none';
+				document.getElementById('info5-div').style.display = 'none';
+				document.getElementById('info6-div').style.display = 'none';
+				document.getElementById('info7-div').style.display = 'none';
+				document.getElementById('info8-div').style.display = 'none';
+
+			} else if (layer === woj3) {
+                geojson3 = L.geoJson(powierz_pow, {
+                    style: style3,
+                    onEachFeature: onEachFeature3
+                }).addTo(map);
+                info3.addTo(map);
+                document.getElementById('info-div').style.display = 'none';
+				document.getElementById('info2-div').style.display = 'none';
+                document.getElementById('info3-div').style.display = 'block';
+				document.getElementById('info4-div').style.display = 'none';
+				document.getElementById('info5-div').style.display = 'none';
+				document.getElementById('info6-div').style.display = 'none';
+				document.getElementById('info7-div').style.display = 'none';
+				document.getElementById('info8-div').style.display = 'none';
+				
+			} else if (layer === woj4) {
+                geojson4 = L.geoJson(wym, {
+                    style: style4,
+                    onEachFeature: onEachFeature4
+                }).addTo(map);
+                info4.addTo(map);
+                document.getElementById('info-div').style.display = 'none';
+				document.getElementById('info2-div').style.display = 'none';
+                document.getElementById('info3-div').style.display = 'none';
+				document.getElementById('info4-div').style.display = 'block';
+				document.getElementById('info5-div').style.display = 'none';
+				document.getElementById('info6-div').style.display = 'none';
+				document.getElementById('info7-div').style.display = 'none';
+				document.getElementById('info8-div').style.display = 'none';
+				
+			} else if (layer === woj5) {
+                geojson5 = L.geoJson(kom_aut, {
+                    style: style5,
+                    onEachFeature: onEachFeature5
+                }).addTo(map);
+                info5.addTo(map);
+                document.getElementById('info-div').style.display = 'none';
+				document.getElementById('info2-div').style.display = 'none';
+                document.getElementById('info3-div').style.display = 'none';
+				document.getElementById('info4-div').style.display = 'none';
+				document.getElementById('info5-div').style.display = 'block';
+				document.getElementById('info6-div').style.display = 'none';
+				document.getElementById('info7-div').style.display = 'none';
+				document.getElementById('info8-div').style.display = 'none';
+            
+			} else if (layer === woj6) {
+                geojson6 = L.geoJson(kom_wies, {
+                    style: style6,
+                    onEachFeature: onEachFeature6
+                }).addTo(map);
+                info6.addTo(map);
+                document.getElementById('info-div').style.display = 'none';
+				document.getElementById('info2-div').style.display = 'none';
+                document.getElementById('info3-div').style.display = 'none';
+				document.getElementById('info4-div').style.display = 'none';
+				document.getElementById('info5-div').style.display = 'none';
+				document.getElementById('info6-div').style.display = 'block';
+				document.getElementById('info7-div').style.display = 'none';
+				document.getElementById('info8-div').style.display = 'none';
+				
+			} else if (layer === pow) {
+                geojson7 = L.geoJson(zat_poc, {
+                    style: style7,
+                    onEachFeature: onEachFeature7
+                }).addTo(map);
+                info7.addTo(map);
+                document.getElementById('info-div').style.display = 'none';
+				document.getElementById('info2-div').style.display = 'none';
+                document.getElementById('info3-div').style.display = 'none';
+				document.getElementById('info4-div').style.display = 'none';
+				document.getElementById('info5-div').style.display = 'none';
+				document.getElementById('info6-div').style.display = 'none';
+				document.getElementById('info7-div').style.display = 'block';
+				document.getElementById('info8-div').style.display = 'none';
+				
+				} else if (layer === pow2) {
+                geojson8 = L.geoJson(licz_stac, {
+                    style: style8,
+                    onEachFeature: onEachFeature8
+                }).addTo(map);
+                info8.addTo(map);
+                document.getElementById('info-div').style.display = 'none';
+				document.getElementById('info2-div').style.display = 'none';
+                document.getElementById('info3-div').style.display = 'none';
+				document.getElementById('info4-div').style.display = 'none';
+				document.getElementById('info5-div').style.display = 'none';
+				document.getElementById('info6-div').style.display = 'none';
+				document.getElementById('info7-div').style.display = 'none';
+				document.getElementById('info8-div').style.display = 'block';
+			} else {
+                // Jeśli dodajemy inne przyszłe warstwy, ustaw widoczność na true
+                layer.setStyle({ visibility: 'visible' });
+            }
+        } else {
+            // Usuń warstwę
+            map.removeLayer(layer);
+
+            // Jeśli usuwamy warstwę geojson, usuń kolory i zdarzenia
+            if (layer === woj1) {
+                map.removeLayer(geojson);
+                document.getElementById('info-div').style.display = 'none';
+            } else if (layer === woj2) {
+                map.removeLayer(geojson2);
+                document.getElementById('info2-div').style.display = 'none';
+			} else if (layer === woj3) {
+                map.removeLayer(geojson3);
+                document.getElementById('info3-div').style.display = 'none';
+			} else if (layer === woj4) {
+                map.removeLayer(geojson4);
+                document.getElementById('info4-div').style.display = 'none';
+			} else if (layer === woj5) {
+                map.removeLayer(geojson5);
+                document.getElementById('info5-div').style.display = 'none';
+			} else if (layer === woj6) {
+                map.removeLayer(geojson6);
+                document.getElementById('info6-div').style.display = 'none';
+			} else if (layer === pow) {
+                map.removeLayer(geojson7);
+                document.getElementById('info7-div').style.display = 'none';
+			} else if (layer === pow2) {
+                map.removeLayer(geojson8);
+                document.getElementById('info8-div').style.display = 'none';	
+            } else {
+                // Jeśli usuwamy inne przyszłe warstwy, ustaw widoczność na false
+                layer.setStyle({ visibility: 'hidden' });
+            }
+        }
+    }
+
+    /*=====SEARCH BUTTON=====*/
+
+    L.Control.geocoder().addTo(map);
+
+    /*=====Choropleth Map 1=====*/
+
+    function getColor_woj1(v) {
+        return v > 10.5 ? '#800026' :
+            v > 8.6 ? '#BD0026' :
+                v > 5.3 ? '#E31A1C' :
+                    v > 3.1 ? '#FC4E2A' :
+                        v > 1.4 ? '#FD8D3C' :
+                            v > 0 ? '#FEB24C' :
+                                '#FFEDA0';
+    }
+
+    function style1(feature) {
+        return {
+            fillColor: getColor_woj1(feature.properties.POW_BEZ_KO),
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.7
+        };
+    }
+	
+	function highlightFeature(e) {
+        var layer = e.target;
+
+        layer.setStyle({
+            weight: 5,
+            color: '#666',
+            dashArray: '',
+            fillOpacity: 0.7
+        });
+
+        info.update(layer.feature.properties);
+    }
+
+    function resetHighlight(e) {
+        geojson.resetStyle(e.target);
+        info.update();
+    }
+
+    function onEachFeature(feature, layer) {
+        layer.on({
+            mouseover: highlightFeature,
+            mouseout: resetHighlight,
+            click: zoomToFeature
+        });
+    }
+	
+	geojson = L.geoJson(drugi, {
+        style: style1,
+        onEachFeature: onEachFeature
+    }).addTo(map);
+
+    var info = L.control();
+
+    info.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+        this._div.id = 'info-div';
+		this.update();
+        return this._div;
+    };
+
+    info.update = function (props) {
+        this._div.innerHTML = '<h4>Populacja województwa bez kolei (na bazie powiatów)</h4>' + (props ?
+            '<b>' + props.JPT_NAZWA_ + '</b><br />' + props.POW_BEZ_KO + '%'
+            : 'Najedź kursorem na województwo');
+    };
+
+    info.addTo(map);
+
+    /*=====Choropleth Map 2=====*/
+
+	function getColor_woj2(v2) {
+        return v2 > 18.2 ? '#800026' :
+            v2 > 14.3 ? '#BD0026' :
+                v2 > 8.7 ? '#E31A1C' :
+                    v2 > 6.7 ? '#FC4E2A' :
+                        v2 > 4.2 ? '#FD8D3C' :
+                            v2 > 0 ? '#FEB24C' :
+                                '#FFEDA0';
+    }
+
+	function highlightFeature2(e2) {
+        var layer = e2.target;
+
+        layer.setStyle({
+            weight: 5,
+            color: '#666',
+            dashArray: '',
+            fillOpacity: 0.7
+        });
+
+        info2.update(layer.feature.properties);
+    }
+
+    function style2(feature) {
+        return {
+            fillColor: getColor_woj2(feature.properties.POW_BeZ_KO),
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.7
+        };
+    }
+
+	function resetHighlight2(e2) {
+        geojson2.resetStyle(e2.target);
+        info2.update();
+    }
+
+    function onEachFeature2(feature, layer) {
+        layer.on({
+            mouseover: highlightFeature2,
+            mouseout: resetHighlight2,
+            click: zoomToFeature
+        });
+    }
+
+	var info2 = L.control();
+
+    info2.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info2');
+        this._div.id = 'info2-div';
+		this.update();
+        return this._div;
+    };
+
+    info2.update = function (props) {
+        this._div.innerHTML = '<h4>Liczba powiatów bez kolei</h4>' + (props ?
+            '<b>' + props.JPT_NAZWA_ + '</b><br />' + props.POW_BeZ_KO + '%'
+            : 'Najedź kursorem na województwo');
+    };
+
+/*=====Choropleth Map 3=====*/
+
+	function getColor_woj3(v3) {
+        return v3 > 15.6 ? '#800026' :
+            v3 > 11.5 ? '#BD0026' :
+                v3 > 7.2 ? '#E31A1C' :
+                    v3 > 5 ? '#FC4E2A' :
+                        v3 > 1.2 ? '#FD8D3C' :
+                            v3 > 0 ? '#FEB24C' :
+                                '#FFEDA0';
+    }
+
+	function highlightFeature3(e3) {
+        var layer = e3.target;
+
+        layer.setStyle({
+            weight: 5,
+            color: '#666',
+            dashArray: '',
+            fillOpacity: 0.7
+        });
+
+        info3.update(layer.feature.properties);
+    }
+
+    function style3(feature) {
+        return {
+            fillColor: getColor_woj3(feature.properties.POW_BEz_KO),
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.7
+        };
+    }
+
+	function resetHighlight3(e3) {
+        geojson3.resetStyle(e3.target);
+        info3.update();
+    }
+
+    function onEachFeature3(feature, layer) {
+        layer.on({
+            mouseover: highlightFeature3,
+            mouseout: resetHighlight3,
+            click: zoomToFeature
+        });
+    }
+
+	var info3 = L.control();
+
+    info3.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info3'); // create a div with a class "info"
+        this._div.id = 'info3-div';
+		this.update();
+        return this._div;
+    };
+
+    info3.update = function (props) {
+        this._div.innerHTML = '<h4>Powierzchnia województwa bez kolei (podstawie powiatu)</h4>' + (props ?
+            '<b>' + props.JPT_NAZWA_ + '</b><br />' + props.POW_BEz_KO + '%'
+            : 'Najedź kursorem na województwo');
+    };
+
+/*=====Choropleth Map 4=====*/
+
+	function getColor_woj4(v4) {
+        return v4 > 11.7 ? '#2b83ba' :
+            v4 > 10.7 ? '#80bfab' :
+                v4 > 7.1 ? '#c7e8ad' :
+                    v4 > 5.5 ? '#ffffbf' :
+                        v4 > 2.7 ? '#fec980' :
+                            v4 > 1.2 ? '#f07c4a' :
+                                '#d7191c';
+    }
+
+	function highlightFeature4(e4) {
+        var layer = e4.target;
+
+        layer.setStyle({
+            weight: 5,
+            color: '#666',
+            dashArray: '',
+            fillOpacity: 0.7
+        });
+
+        info4.update(layer.feature.properties);
+    }
+
+    function style4(feature) {
+        return {
+            fillColor: getColor_woj4(feature.properties.Wsk_wym_me),
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.7
+        };
+    }
+
+	function resetHighlight4(e4) {
+        geojson4.resetStyle(e4.target);
+        info4.update();
+    }
+
+    function onEachFeature4(feature, layer) {
+        layer.on({
+            mouseover: highlightFeature4,
+            mouseout: resetHighlight4,
+            click: zoomToFeature
+        });
+    }
+
+	var info4 = L.control();
+
+    info4.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info4'); // create a div with a class "info"
+        this._div.id = 'info4-div';
+		this.update();
+        return this._div;
+    };
+
+    info4.update = function (props) {
+        this._div.innerHTML = '<h4>Wskaźnik wymiany pasażerskiej (mediana dla województwa)</h4>' + (props ?
+            '<b>' + props.JPT_NAZWA_ + '</b><br />' + props.Wsk_wym_me
+            : 'Najedź kursorem na województwo');
+    };
+
+	/*=====Choropleth Map 5=====*/
+
+	function getColor_woj5(v5) {
+        return v5 > (-10.8) ? '#FFEDA0' : 
+            v5 > (-20.3) ? '#FEB24C' :
+                v5 > (-32.1) ? '#FD8D3C' : 
+                    v5 > (-48.4) ? '#FC4E2A' :
+                        v5 > (-62.7) ? '#E31A1C' :
+                            v5 > (-69.1) ? '#BD0026' :
+                                '#800026'; 
+    }
+
+	function highlightFeature5(e5) {
+        var layer = e5.target;
+
+        layer.setStyle({
+            weight: 5,
+            color: '#666',
+            dashArray: '',
+            fillOpacity: 0.7
+        });
+
+        info5.update(layer.feature.properties);
+    }
+
+    function style5(feature) {
+        return {
+            fillColor: getColor_woj5(feature.properties.WOJ_ZMIAN),
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.7
+        };
+    }
+
+	function resetHighlight5(e5) {
+        geojson5.resetStyle(e5.target);
+        info5.update();
+    }
+
+    function onEachFeature5(feature, layer) {
+        layer.on({
+            mouseover: highlightFeature5,
+            mouseout: resetHighlight5,
+            click: zoomToFeature
+        });
+    }
+
+	var info5 = L.control();
+
+    info5.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info5'); // create a div with a class "info"
+        this._div.id = 'info5-div';
+		this.update();
+        return this._div;
+    };
+
+    info5.update = function (props) {
+        this._div.innerHTML = '<h4>Zmiana liczby kilometrów komunikacji autobusowej 2016 - 2022</h4>' + (props ?
+            '<b>' + props.JPT_NAZWA_ + '</b><br />' + props.WOJ_ZMIAN + '%'
+            : 'Najedź kursorem na województwo');
+    };
+	
+	/*=====Choropleth Map 6=====*/
+
+	function getColor_woj6(v6) {
+        return v6 > 47.9 ? '#2b83ba' : 
+            v6 > 4 ? '#80bfab' :
+                v6 > -4.4 ? '#c7e8ad' : 
+                    v6 > -17.1 ? '#ffffbf' :
+                        v6 > -28.1 ? '#fec980' :
+                            v6 > -43.2 ? '#f07c4a' :
+                                '#d7191c'; 
+    }
+
+	function highlightFeature6(e6) {
+        var layer = e6.target;
+
+        layer.setStyle({
+            weight: 5,
+            color: '#666',
+            dashArray: '',
+            fillOpacity: 0.7
+        });
+
+        info6.update(layer.feature.properties);
+    }
+
+    function style6(feature) {
+        return {
+            fillColor: getColor_woj6(feature.properties.WOJ_WIES),
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.7
+        };
+    }
+
+	function resetHighlight6(e6) {
+        geojson6.resetStyle(e6.target);
+        info6.update();
+    }
+
+    function onEachFeature6(feature, layer) {
+        layer.on({
+            mouseover: highlightFeature6,
+            mouseout: resetHighlight6,
+            click: zoomToFeature
+        });
+    }
+
+	var info6 = L.control();
+
+    info6.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info6');
+        this._div.id = 'info6-div';
+		this.update();
+        return this._div;
+    };
+
+    info6.update = function (props) {
+        this._div.innerHTML = '<h4>Zmiana liczby kilometrów komunikacji autobusowej na wsi 2016 - 2022</h4>' + (props ?
+            '<b>' + props.JPT_NAZWA_ + '</b><br />' + props.WOJ_WIES + '%'
+            : 'Najedź kursorem na województwo');
+    };
+	
+	/*=====Choropleth Map 7=====*/
+
+	function getColor_pow(v7) {
+        return v7 > 1088556 ? '#2b83ba' :
+            v7 > 558388 ? '#5aa4b2' :
+                v7 > 427320 ? '#88c4aa' :
+                    v7 > 298184 ? '#b3e0a6' :
+                        v7 > 190639 ? '#d1ecb0' :
+                            v7 > 142469 ? '#f0f9ba' :
+                                v7 > 108654 ? '#fff0ae' :
+									v7 > 83101 ? '#fed38c' :
+										v7 > 58626 ? '#fdb56a' :
+											v7 > 34194 ? '#f3854e' :
+												v7 > 12282 ? '#e54f35' :
+														'#d7191c';
+    }
+
+	function highlightFeature7(e7) {
+        var layer = e7.target;
+
+        layer.setStyle({
+            weight: 5,
+            color: '#666',
+            dashArray: '',
+            fillOpacity: 0.7
+        });
+
+        info7.update(layer.feature.properties);
+    }
+
+    function style7(feature) {
+        return {
+            fillColor: getColor_pow(feature.properties.Zatrz_poc),
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.7
+        };
+    }
+
+	function resetHighlight7(e7) {
+        geojson7.resetStyle(e7.target);
+        info7.update();
+    }
+
+    function onEachFeature7(feature, layer) {
+        layer.on({
+            mouseover: highlightFeature7,
+            mouseout: resetHighlight7,
+            click: zoomToFeature
+        });
+    }
+
+	var info7 = L.control();
+
+    info7.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info7'); // create a div with a class "info"
+        this._div.id = 'info7-div';
+		this.update();
+        return this._div;
+    };
+
+    info7.update = function (props) {
+        this._div.innerHTML = '<h4>Liczba zatrzymań pociągów w powiecie</h4>' + (props ?
+            '<b>' + props.JPT_NAZWA_ + '</b><br />' + props.Zatrz_poc
+            : 'Najedź kursorem na powiat');
+    };
+	
+	/*=====Choropleth Map 8=====*/
+
+	function getColor_pow2(v8) {
+        return v8 > 2.38 ? '#8aba93' :
+            v8 > 1.99 ? '#5aa4b2' :
+                v8 > 1.77 ? '#88c4aa' :
+                    v8 > 1.58 ? '#b3e0a6' :
+                        v8 > 1.36 ? '#d1ecb0' :
+                            v8 > 1.15 ? '#f0f9ba' :
+                                v8 > 0.97 ? '#fff0ae' :
+									v8 > 0.76 ? '#fed38c' :
+										v8 > 0.57 ? '#fdb56a' :
+											v8 > 0.37 ? '#f3854e' :
+												v8 > 0.12 ? '#e54f35' :
+														'#d7191c';
+    }
+
+	function highlightFeature8(e8) {
+        var layer = e8.target;
+
+        layer.setStyle({
+            weight: 5,
+            color: '#666',
+            dashArray: '',
+            fillOpacity: 0.7
+        });
+
+        info8.update(layer.feature.properties);
+    }
+
+    function style8(feature) {
+        return {
+            fillColor: getColor_pow2(feature.properties.Stac_na_po),
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.7
+        };
+    }
+
+	function resetHighlight8(e8) {
+        geojson8.resetStyle(e8.target);
+        info8.update();
+    }
+
+    function onEachFeature8(feature, layer) {
+        layer.on({
+            mouseover: highlightFeature8,
+            mouseout: resetHighlight8,
+            click: zoomToFeature
+        });
+    }
+
+	var info8 = L.control();
+
+    info8.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info8');
+        this._div.id = 'info8-div';
+		this.update();
+        return this._div;
+    };
+
+    info8.update = function (props) {
+        this._div.innerHTML = '<h4>Liczba czynnych stacji w powiecie w przeliczeniu na 10000 tys. mieszkańców</h4>' + (props ?
+            '<b>' + props.JPT_NAZWA_ + '</b><br />' + props.Stac_na_po
+            : 'Najedź kursorem na powiat');
+    };
+	
+	function zoomToFeature(e) {
+        map.fitBounds(e.target.getBounds());
+    }
+	
+	L.control.scale().addTo(map);
+	
+</script>
